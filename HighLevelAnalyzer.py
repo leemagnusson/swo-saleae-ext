@@ -17,7 +17,7 @@ class Hla(HighLevelAnalyzer):
             'format': 'overflow'
         },
         'timestamp': {
-            'format': 'ts: {{data.value}}'
+            'format': 'ts{{data.ts_type}}: {{data.value}}'
         }
     }
 
@@ -33,6 +33,7 @@ class Hla(HighLevelAnalyzer):
         self.ts_frame = []
         self.ts = 0
         self.count = 0
+        self.ts_type = 0
 
     def decode(self, frame: AnalyzerFrame):
         '''
@@ -71,7 +72,7 @@ class Hla(HighLevelAnalyzer):
                 print("abc " + str((byte & 0x7F) << ((len(self.ts_frame)-1)*7)))
             self.ts += (byte & 0x7F) << ((len(self.ts_frame)-1)*7)
             frame_out =  AnalyzerFrame('timestamp', self.ts_frame[0].start_time, frame.end_time, {
-                    'value': self.ts
+                    'ts_type': self.ts_type, 'value': self.ts
                 })
             self.ts_frame = []
             self.ts = 0
@@ -87,6 +88,14 @@ class Hla(HighLevelAnalyzer):
             if (frame.data['data'] == b'\x0e'):
                 self.interrupt_frame = [frame]
             
-            if (frame.data['data'] == b'\xc0'):
+            if (frame.data['data'] == b'\xc0') or (frame.data['data'] == b'\xd0') or (frame.data['data'] == b'\xe0') or (frame.data['data'] == b'\xf0'):
                 self.ts_frame = [frame]
+                if frame.data['data'] == b'\xc0':
+                    self.ts_type = 0
+                elif frame.data['data'] == b'\xd0':
+                    self.ts_type = 1
+                elif frame.data['data'] == b'\xe0':
+                    self.ts_type = 2
+                elif frame.data['data'] == b'\xf0':
+                    self.ts_type = 3
 
